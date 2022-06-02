@@ -86,6 +86,34 @@ builder.Services.Configure<AspNetCoreInstrumentationOptions>(builder.Configurati
 // Logging
 builder.Logging.ClearProviders();
 
+builder.Logging.AddJsonConsole();
+
+builder.Services.AddLogging((loggingBuilder => {
+    loggingBuilder.AddFile("/Users/sasha/Desktop/dev/test_2/logs/otelLogs.json", fileLoggerOpts => {
+	fileLoggerOpts.FormatLogEntry = (msg) => {
+		var sb = new System.Text.StringBuilder();
+		StringWriter sw = new StringWriter(sb);
+		var jsonWriter = new Newtonsoft.Json.JsonTextWriter(sw);
+        jsonWriter.WriteStartObject();
+        jsonWriter.WritePropertyName("Timestamp");
+		jsonWriter.WriteValue(DateTime.Now.ToString("o"));
+        jsonWriter.WritePropertyName("LogLevel");
+		jsonWriter.WriteValue(msg.LogLevel.ToString());
+        jsonWriter.WritePropertyName("LogName");
+		jsonWriter.WriteValue(msg.LogName);
+        jsonWriter.WritePropertyName("EventId");
+		jsonWriter.WriteValue(msg.EventId.Id);
+        jsonWriter.WritePropertyName("Message");
+		jsonWriter.WriteValue(msg.Message);
+        jsonWriter.WritePropertyName("Exception");
+		jsonWriter.WriteValue(msg.Exception?.ToString());
+        jsonWriter.WriteEndObject();
+		return sb.ToString();
+    };
+    });
+}));
+
+
 builder.Logging.AddOpenTelemetry(options =>
 {
     options.SetResourceBuilder(resourceBuilder);
@@ -150,7 +178,12 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(options => 
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "v1");
+        options.RoutePrefix = string.Empty;
+    }
+    );
 }
 
 app.UseHttpsRedirection();
